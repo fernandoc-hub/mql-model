@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scale Army — MQL Quality Model v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F3;--surface:#fff;--surface2:#F0EEE9;--border:#E2DDD6;
+  --text:#1A1814;--text2:#6B6760;--text3:#A09C97;
+  --blue:#1A5FBF;--blue-bg:#EBF2FF;--blue-text:#0D3A7A;
+  --green:#1A7A4A;--green-bg:#E8F7EE;--green-text:#0E4D2E;
+  --amber:#A05C00;--amber-bg:#FFF4E0;--amber-text:#6B3D00;
+  --red:#BF2020;--red-bg:#FFF0F0;--red-text:#7A0D0D;
+  --purple:#6B3FAF;--purple-bg:#F3EEFF;
+  --r:8px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+.page{max-width:960px;margin:0 auto;padding:2rem 1.5rem 5rem}
+
+/* Header */
+.hd{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:.4rem}
+.title{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.subtitle{font-size:13px;color:var(--text2);margin-top:.3rem}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem}
+.pill{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;color:var(--text2)}
+.pill span{color:var(--text);font-weight:700}
+.pill.red span{color:var(--red)}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;overflow-x:auto}
+.tab{background:none;border:none;padding:9px 16px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s,border-color .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* Section label */
+.sec{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:1.4rem 0 .6rem}
+
+/* Filter chips */
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--blue);color:var(--blue)}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* Metric cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:1rem}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.mc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px}
+.mc-val{font-size:18px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.mc-delta{font-size:11px;font-weight:500;margin-top:2px}
+.good{color:var(--green)}.bad{color:var(--red)}.note{color:var(--text2)}
+
+/* Sliders */
+.sl-wrap{display:flex;align-items:center;gap:10px;margin:.5rem 0}
+.sl-lbl{font-size:12px;color:var(--text2);min-width:200px}
+.sl-wrap input[type=range]{flex:1;accent-color:var(--blue);cursor:pointer}
+.sl-val{font-size:12px;font-weight:600;min-width:60px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+
+/* Alert */
+.alert{border-radius:var(--r);padding:10px 14px;font-size:12px;margin:.6rem 0;border-left:3px solid}
+.alert-warn{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber)}
+.alert-info{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue)}
+.alert-good{background:var(--green-bg);color:var(--green-text);border-color:var(--green)}
+.alert-danger{background:var(--red-bg);color:var(--red-text);border-color:var(--red)}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:right;padding:7px 10px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
+th:first-child{text-align:left}
+td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+td:first-child{text-align:left}
+tr:last-child td{border-bottom:none}
+tr.total-row td{font-weight:600;background:var(--surface2)}
+.cell-g{background:var(--green-bg);color:var(--green-text);border-radius:4px}
+.cell-a{background:var(--amber-bg);color:var(--amber-text);border-radius:4px}
+.cell-r{background:var(--red-bg);color:var(--red-text);border-radius:4px}
+.cell-b{background:var(--blue-bg);color:var(--blue-text);border-radius:4px;font-weight:600}
+
+/* Chart */
+.chart-wrap{position:relative;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:.5rem 0;font-size:11px;color:var(--text2)}
+.lsw{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.li{display:flex;align-items:center;gap:4px}
+
+/* Recommendation */
+.rec-row{display:grid;grid-template-columns:200px 1fr;gap:12px;padding:9px 0;border-bottom:.5px solid var(--border)}
+.rec-row:last-child{border-bottom:none}
+.rlbl{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+.rval{font-size:13px;font-weight:500;color:var(--text)}
+.rnote{font-size:11px;color:var(--text3);margin-top:2px}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.b-blue{background:var(--blue-bg);color:var(--blue-text)}
+.b-green{background:var(--green-bg);color:var(--green-text)}
+.b-amber{background:var(--amber-bg);color:var(--amber-text)}
+.b-red{background:var(--red-bg);color:var(--red-text)}
+
+.footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+
+@media(max-width:600px){
+  .page{padding:1rem 1rem 4rem}
+  .title{font-size:20px}
+  .sl-lbl{min-width:130px;font-size:11px}
+  .rec-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="hd">
+  <div class="eyebrow">Scale Army · Finance Strategy</div>
+  <div class="title">MQL Quality vs Profitability Model</div>
+  <div class="subtitle">Role family &amp; seniority as primary quality drivers — company size as retention multiplier</div>
+  <div class="pill-row">
+    <div class="pill">Avg rev/client/mo: <span>$5,433</span></div>
+    <div class="pill">Monthly revenue: <span>$814,942</span></div>
+    <div class="pill red">Blended EBITDA margin: <span>-4.74%</span></div>
+    <div class="pill">Active clients: <span>150</span></div>
+    <div class="pill">Close rate (trailing): <span>59%</span></div>
+    <div class="pill">Baseline CPMH: <span>$800</span></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('model',this)">Role Quality Model</button>
+  <button class="tab" onclick="showTab('families',this)">Family Analysis</button>
+  <button class="tab" onclick="showTab('sensitivity',this)">Sensitivity</button>
+  <button class="tab" onclick="showTab('history',this)">Close Rate History</button>
+  <button class="tab" onclick="showTab('rec',this)">Recommendation</button>
+</div>
+
+<!-- MODEL TAB -->
+<div id="tab-model">
+  <div class="sec">Seniority floor — MQL minimum</div>
+  <div class="chip-row">
+    <button class="chip active" id="s0" onclick="setSen(0)">No floor (baseline)</button>
+    <button class="chip" id="s1" onclick="setSen(1)">Mid-Level+</button>
+    <button class="chip" id="s2" onclick="setSen(2)">Senior+</button>
+    <button class="chip" id="s3" onclick="setSen(3)">Senior+++</button>
+  </div>
+
+  <div class="sec">Role family filter</div>
+  <div class="chip-row">
+    <button class="chip active" id="f0" onclick="setFam(0)">All families</button>
+    <button class="chip" id="f1" onclick="setFam(1)">Exclude Operations</button>
+    <button class="chip" id="f2" onclick="setFam(2)">Top 6 families</button>
+    <button class="chip" id="f3" onclick="setFam(3)">Premium only (Eng, Prod, RevOps)</button>
+  </div>
+
+  <div class="sec">Funnel inputs</div>
+  <div class="sl-wrap">
+    <span class="sl-lbl">Meetings / month</span>
+    <input type="range" min="20" max="200" step="5" id="sl-m" oninput="upd()">
+    <span class="sl-val" id="o-m">100</span>
+  </div>
+  <div class="sl-wrap">
+    <span class="sl-lbl">CPMH</span>
+    <input type="range" min="400" max="3000" step="50" id="sl-c" oninput="upd()">
+    <span class="sl-val" id="o-c">$800</span>
+  </div>
+  <div class="sl-wrap">
+    <span class="sl-lbl">Close rate</span>
+    <input type="range" min="10" max="100" step="1" id="sl-r" oninput="upd()">
+    <span class="sl-val" id="o-r">59%</span>
+  </div>
+  <div class="sl-wrap">
+    <span class="sl-lbl">Avg placements per customer</span>
+    <input type="range" min="1" max="5" step="0.5" id="sl-p" oninput="upd()">
+    <span class="sl-val" id="o-p">1.5</span>
+  </div>
+  <div class="sl-wrap">
+    <span class="sl-lbl">EBITDA margin target (%)</span>
+    <input type="range" min="-20" max="40" step="1" id="sl-em" oninput="upd()">
+    <span class="sl-val" id="o-em">-4.7%</span>
+  </div>
+
+  <div class="sec">Results vs baseline</div>
+  <div id="alert-z"></div>
+  <div class="cards" id="cards-z"></div>
+  <div class="legend" id="leg-main"></div>
+  <div class="chart-wrap" style="height:260px"><canvas id="ch-main" role="img" aria-label="Key metrics comparison between baseline and selected filter"></canvas></div>
+</div>
+
+<!-- FAMILIES TAB -->
+<div id="tab-families" style="display:none">
+  <div class="sec">Average monthly billing by role family</div>
+  <div class="chart-wrap" style="height:280px"><canvas id="ch-fam" role="img" aria-label="Average monthly billing by role family"></canvas></div>
+  <div class="sec" style="margin-top:1.5rem">Revenue and margin by seniority level</div>
+  <div class="chart-wrap" style="height:240px"><canvas id="ch-sen" role="img" aria-label="Revenue and margin by seniority level"></canvas></div>
+  <div class="sec" style="margin-top:1.5rem">Family detail</div>
+  <div class="tbl-wrap" id="fam-table"></div>
+</div>
+
+<!-- SENSITIVITY TAB -->
+<div id="tab-sensitivity" style="display:none">
+  <div class="sec">Net EBITDA / month — seniority floor × CPMH</div>
+  <div class="tbl-wrap" id="sens-table"></div>
+  <div style="display:flex;gap:12px;margin:.8rem 0;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green-text)"><span style="width:10px;height:10px;border-radius:2px;background:#C0DD97;display:inline-block"></span>Above baseline</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--amber-text)"><span style="width:10px;height:10px;border-radius:2px;background:#FAC775;display:inline-block"></span>Within 15% of baseline</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--red-text)"><span style="width:10px;height:10px;border-radius:2px;background:#FFDEE2;display:inline-block"></span>More than 15% below baseline</span>
+  </div>
+  <div class="sec" style="margin-top:1rem">Max sustainable CPMH per seniority floor</div>
+  <div class="chart-wrap" style="height:220px"><canvas id="ch-cpmh" role="img" aria-label="Maximum sustainable CPMH by seniority floor"></canvas></div>
+</div>
+
+<!-- CLOSE RATE HISTORY TAB -->
+<div id="tab-history" style="display:none">
+  <div class="alert alert-warn" style="margin-top:0">
+    <strong>April 2026 anomaly (175%):</strong> Rate above 100% likely reflects prior-month pipeline flush. Excluded from trailing average used in model.
+  </div>
+  <div class="chart-wrap" style="height:260px"><canvas id="ch-hist" role="img" aria-label="Monthly close rates Sep 2025 to Jun 2026"></canvas></div>
+  <div class="cards" id="hist-cards" style="margin-top:1rem"></div>
+</div>
+
+<!-- RECOMMENDATION TAB -->
+<div id="tab-rec" style="display:none">
+  <div id="rec-content"></div>
+</div>
+
+<div class="footer">
+  <span>Scale Army · MQL Quality Model · Jun 2026</span>
+  <span>Actuals: $4,074,712 revenue Jan–May · -$192,960 EBITDA · 150 active clients · $5,433 avg rev/client/mo</span>
+</div>
+</div>
+
+<script>
+// ── ACTUALS ────────────────────────────────────────────────────
+const TOTAL_REV    = 4074712.14;
+const TOTAL_EBITDA = -192959.53;
+const MONTHS       = 5;
+const CLIENTS      = 150;
+const MONTHLY_REV  = TOTAL_REV / MONTHS;          // 814,942
+const AVG_REV_CLIENT = MONTHLY_REV / CLIENTS;      // 5,432.95
+const ACT_EBITDA_M   = TOTAL_EBITDA / TOTAL_REV;  // -0.04735 (-4.74%)
+const BASE_CPMH   = 800;
+const TRAILING_CR = 0.59;
+
+// ── PRICING CATALOG DATA ──────────────────────────────────────
+// Source: 960 role-region-seniority combinations
+const FAMILIES = [
+  {name:'Product',        avgPrice:10596, margin:0.328, roles:4,  volAdj:0.60, tier:3},
+  {name:'RevOps',         avgPrice:9717,  margin:0.328, roles:6,  volAdj:0.65, tier:3},
+  {name:'Engineering',    avgPrice:7458,  margin:0.328, roles:12, volAdj:0.70, tier:3},
+  {name:'Marketing',      avgPrice:7081,  margin:0.328, roles:10, volAdj:0.75, tier:2},
+  {name:'Sales',          avgPrice:6438,  margin:0.328, roles:9,  volAdj:0.78, tier:2},
+  {name:'QA',             avgPrice:5844,  margin:0.329, roles:7,  volAdj:0.80, tier:2},
+  {name:'Customer Success',avgPrice:5492, margin:0.328, roles:10, volAdj:0.82, tier:2},
+  {name:'Data',           avgPrice:5129,  margin:0.328, roles:5,  volAdj:0.85, tier:2},
+  {name:'Finance',        avgPrice:5058,  margin:0.328, roles:4,  volAdj:0.85, tier:2},
+  {name:'Design',         avgPrice:4188,  margin:0.328, roles:6,  volAdj:0.88, tier:1},
+  {name:'Operations',     avgPrice:3563,  margin:0.328, roles:7,  volAdj:0.92, tier:1},
+];
+
+const CATALOG_AVG = 6384; // blended avg price across all catalog roles
+
+// Price multipliers derived from seniority tiers in catalog
+const SENIORITY = [
+  {name:'No floor',   priceMulti:1.000, marginAdj: 0.000, volAdj:1.00, closeAdj:1.00},
+  {name:'Mid-Level+', priceMulti:1.111, marginAdj:-0.018, volAdj:0.82, closeAdj:1.06},
+  {name:'Senior+',    priceMulti:1.280, marginAdj:-0.040, volAdj:0.68, closeAdj:1.10},
+  {name:'Senior+++',  priceMulti:1.446, marginAdj:-0.068, volAdj:0.50, closeAdj:1.14},
+];
+
+const FAM_TIERS = [
+  {label:'All families',           filter:()=>true,           volAdj:1.00, priceMulti:1.000},
+  {label:'Exclude Operations',     filter:f=>f.name!=='Operations', volAdj:0.92, priceMulti:1.045},
+  {label:'Top 6 families',         filter:f=>f.tier>=2,       volAdj:0.80, priceMulti:1.120},
+  {label:'Premium only',           filter:f=>f.tier===3,      volAdj:0.60, priceMulti:1.358},
+];
+
+const HIST = [
+  {m:'Sep 25',v:55},{m:'Oct 25',v:53},{m:'Nov 25',v:58},{m:'Dec 25',v:45},
+  {m:'Jan 26',v:61},{m:'Feb 26',v:65},{m:'Mar 26',v:88},{m:'Apr 26',v:175},
+  {m:'May 26',v:50},{m:'Jun 26',v:46}
+];
+const VALID_CR = HIST.filter(d=>d.v<=100).map(d=>d.v);
+const TRAILING_AVG = Math.round(VALID_CR.reduce((a,b)=>a+b,0)/VALID_CR.length);
+
+let curSen=0, curFam=0, charts={};
+
+// ── SCENARIO CALCULATOR ───────────────────────────────────────
+function calcS(si, fi, meetings, cpmh, cr, placements, ebitdaMargin){
+  const sen = SENIORITY[si];
+  const fam = FAM_TIERS[fi];
+  const effM    = Math.round(meetings * sen.volAdj * fam.volAdj);
+  const effCR   = cr * sen.closeAdj;
+  const customers = Math.round(effM * effCR);
+  const mktSpend  = effM * cpmh;
+
+  // Revenue uses actual avg rev/client scaled by seniority and family price multipliers
+  const effRevPerCustomer = AVG_REV_CLIENT * sen.priceMulti * fam.priceMulti * placements;
+  const totalRev   = customers * effRevPerCustomer;
+
+  // EBITDA uses actual margin (user-adjustable) plus seniority margin adjustment
+  const effMargin  = ebitdaMargin + sen.marginAdj;
+  const grossEBITDA = totalRev * effMargin;
+  const netEBITDA  = grossEBITDA - mktSpend;
+
+  return {effM, customers, mktSpend, totalRev, grossEBITDA, netEBITDA, effRevPerCustomer, effMargin};
+}
+
+function getP(){
+  return {
+    m:  +document.getElementById('sl-m').value,
+    cp: +document.getElementById('sl-c').value,
+    cr: +document.getElementById('sl-r').value/100,
+    pp: +document.getElementById('sl-p').value,
+    em: +document.getElementById('sl-em').value/100,
+  };
+}
+
+const usd  = n => '$'+Math.abs(Math.round(n)).toLocaleString();
+const usdK = n => (n<0?'-':'')+' $'+Math.round(Math.abs(n)/1000)+'K';
+const pct  = n => (n>=0?'+':'')+Math.round(n*10)/10+'%';
+const dd   = (a,b) => b!==0?(a-b)/Math.abs(b)*100:0;
+
+function upd(){
+  const {m,cp,cr,pp,em} = getP();
+  document.getElementById('o-m').textContent  = m;
+  document.getElementById('o-c').textContent  = '$'+cp.toLocaleString();
+  document.getElementById('o-r').textContent  = Math.round(cr*100)+'%';
+  document.getElementById('o-p').textContent  = pp.toFixed(1);
+  document.getElementById('o-em').textContent = (em*100).toFixed(1)+'%';
+
+  const base = calcS(0,0,m,BASE_CPMH,TRAILING_CR,pp,ACT_EBITDA_M);
+  const curr = calcS(curSen,curFam,m,cp,cr,pp,em);
+  const isBase = curSen===0 && curFam===0 && Math.abs(em-ACT_EBITDA_M)<0.001 && Math.abs(cp-BASE_CPMH)<1;
+
+  const metrics = [
+    {l:'Meetings/month',     v:curr.effM,                       delta:curr.effM-base.effM, isN:true},
+    {l:'Customers/month',    v:curr.customers,                  delta:curr.customers-base.customers, isN:true},
+    {l:'Avg rev/customer',   v:usd(curr.effRevPerCustomer),     delta:dd(curr.effRevPerCustomer,base.effRevPerCustomer)},
+    {l:'Total revenue',      v:usdK(curr.totalRev).trim(),      delta:dd(curr.totalRev,base.totalRev)},
+    {l:'Gross EBITDA',       v:usdK(curr.grossEBITDA).trim(),   delta:dd(curr.grossEBITDA,base.grossEBITDA)},
+    {l:'Net EBITDA',         v:usdK(curr.netEBITDA).trim(),     delta:dd(curr.netEBITDA,base.netEBITDA)},
+    {l:'EBITDA margin',      v:(curr.effMargin*100).toFixed(1)+'%', delta:dd(curr.effMargin,base.effMargin)},
+    {l:'Mkt spend',          v:usd(curr.mktSpend),              delta:dd(curr.mktSpend,base.mktSpend)},
+  ];
+
+  document.getElementById('cards-z').innerHTML = metrics.map(c=>{
+    const good = c.isN ? c.delta>0 : (c.l==='Mkt spend'?c.delta<0:c.delta>0);
+    const cls  = isBase?'note':good?'good':'bad';
+    const sign = c.isN?(c.delta>=0?'+':'')+c.delta:pct(c.delta);
+    return `<div class="mc"><div class="mc-lbl">${c.l}</div><div class="mc-val">${c.v}</div>${!isBase?`<div class="mc-delta ${cls}">${sign} vs baseline</div>`:''}</div>`;
+  }).join('');
+
+  const az = document.getElementById('alert-z');
+  if(em < -0.10) az.innerHTML = `<div class="alert alert-danger"><strong>Loss scenario:</strong> At ${(em*100).toFixed(1)}% EBITDA margin the business is losing ${usd(Math.abs(curr.grossEBITDA))} per month before marketing.</div>`;
+  else if(!isBase && curr.netEBITDA > base.netEBITDA) az.innerHTML = `<div class="alert alert-good"><strong>Improvement:</strong> This qualification standard increases net EBITDA vs baseline.</div>`;
+  else if(!isBase && curr.netEBITDA < base.netEBITDA) az.innerHTML = `<div class="alert alert-warn"><strong>Caution:</strong> Net EBITDA is below baseline — volume loss is outpacing quality gains at this CPMH.</div>`;
+  else if(!isBase && curr.customers < 8) az.innerHTML = `<div class="alert alert-danger"><strong>Pipeline risk:</strong> Only ${curr.customers} customers/month — may be too low to sustain operations.</div>`;
+  else az.innerHTML='';
+
+  // Chart
+  const labels=['Meetings','Customers','Gross EBITDA ($K)','Net EBITDA ($K)','Avg Rev ($K)'];
+  const bD=[base.effM,base.customers,Math.round(base.grossEBITDA/1000),Math.round(base.netEBITDA/1000),Math.round(base.effRevPerCustomer/1000)];
+  const cD=[curr.effM,curr.customers,Math.round(curr.grossEBITDA/1000),Math.round(curr.netEBITDA/1000),Math.round(curr.effRevPerCustomer/1000)];
+
+  if(charts.main) charts.main.destroy();
+  charts.main=new Chart(document.getElementById('ch-main'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Baseline',data:bD,backgroundColor:'#C8C3BB',borderRadius:5},
+      {label:'Selected',data:cD,backgroundColor:'#1A5FBF',borderRadius:5}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.raw}`}}},
+      scales:{y:{ticks:{color:'#A09C97',font:{size:10}},grid:{color:'#F0EEE9'}},
+              x:{ticks:{color:'#6B6760',font:{size:10}},grid:{display:false}}}}
+  });
+  document.getElementById('leg-main').innerHTML=
+    `<span class="li"><span class="lsw" style="background:#C8C3BB"></span>Baseline (no filter, $800 CPMH, actual margin)</span>`+
+    `<span class="li"><span class="lsw" style="background:#1A5FBF"></span>${SENIORITY[curSen].name} · ${FAM_TIERS[curFam].label}</span>`;
+}
+
+function setSen(i){curSen=i;for(let k=0;k<4;k++)document.getElementById('s'+k).classList.toggle('active',k===i);upd();}
+function setFam(i){curFam=i;for(let k=0;k<4;k++)document.getElementById('f'+k).classList.toggle('active',k===i);upd();}
+
+// ── FAMILIES TAB ──────────────────────────────────────────────
+function buildFamilies(){
+  const sorted=[...FAMILIES].sort((a,b)=>b.avgPrice-a.avgPrice);
+
+  if(charts.fam) charts.fam.destroy();
+  charts.fam=new Chart(document.getElementById('ch-fam'),{
+    type:'bar',
+    data:{labels:sorted.map(f=>f.name),datasets:[
+      {label:'Avg monthly billing ($)',data:sorted.map(f=>f.avgPrice),
+       backgroundColor:sorted.map(f=>f.tier===3?'#1A5FBF':f.tier===2?'#0B8A8A':'#C8C3BB'),borderRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.raw.toLocaleString()+'/mo'}}},
+      scales:{x:{ticks:{color:'#A09C97',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'#F0EEE9'}},
+              y:{ticks:{color:'#6B6760',font:{size:11}},grid:{display:false}}}}
+  });
+
+  const senPrices=[3830,4758,5706,6814,7959,9236];
+  const senMargins=[42.6,37.4,32.5,30.5,28.0,26.0];
+  const senLabels=['Junior','Mid-Level','Senior','Senior+','Senior++','Senior+++'];
+
+  if(charts.sen) charts.sen.destroy();
+  charts.sen=new Chart(document.getElementById('ch-sen'),{
+    type:'bar',
+    data:{labels:senLabels,datasets:[
+      {label:'Avg monthly billing',data:senPrices,backgroundColor:'#1A5FBF',borderRadius:4,yAxisID:'y'},
+      {label:'Catalog margin %',data:senMargins,type:'line',borderColor:'#1A7A4A',backgroundColor:'transparent',tension:0.3,pointRadius:4,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.yAxisID==='y2'?ctx.raw+'%':'$'+ctx.raw.toLocaleString()+'/mo'}}},
+      scales:{
+        y:{beginAtZero:true,ticks:{color:'#A09C97',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'#F0EEE9'}},
+        y2:{position:'right',ticks:{color:'#1A7A4A',font:{size:10},callback:v=>v+'%'},grid:{display:false}}
+      }}
+  });
+
+  const famRanges={
+    'Product':[3450,26500],'RevOps':[1750,34650],'Engineering':[1800,34650],
+    'Marketing':[1350,32650],'Sales':[1750,24450],'QA':[1550,16300],
+    'Customer Success':[1450,22450],'Data':[2000,11450],'Finance':[1550,14300],
+    'Design':[1750,8950],'Operations':[1100,9800]
+  };
+  const tierBadge=t=>t===3?'<span class="badge b-blue">Premium</span>':t===2?'<span class="badge" style="background:var(--surface2);color:var(--text2)">Standard</span>':'<span class="badge b-amber">Support</span>';
+  let html=`<table><thead><tr><th>Family</th><th style="text-align:right">Unique roles</th><th style="text-align:right">Avg price/mo</th><th style="text-align:right">Annual/placement</th><th style="text-align:right">Price range/mo</th><th style="text-align:right">Tier</th></tr></thead><tbody>`;
+  for(const f of sorted){
+    const [mn,mx]=famRanges[f.name]||[0,0];
+    html+=`<tr><td style="font-weight:500">${f.name}</td><td>${f.roles}</td><td>$${f.avgPrice.toLocaleString()}</td><td>$${(f.avgPrice*12).toLocaleString()}</td><td>$${mn.toLocaleString()} – $${mx.toLocaleString()}</td><td>${tierBadge(f.tier)}</td></tr>`;
+  }
+  html+=`</tbody></table>`;
+  document.getElementById('fam-table').innerHTML=html;
+}
+
+// ── SENSITIVITY TAB ────────────────────────────────────────────
+function buildSens(){
+  const {m,pp}=getP();
+  const em=ACT_EBITDA_M;
+  const cpmhs=[800,1000,1200,1500,2000];
+  const base=calcS(0,0,m,BASE_CPMH,TRAILING_CR,pp,em);
+
+  let html=`<table><thead><tr><th>Seniority floor</th>`;
+  cpmhs.forEach(cp=>html+=`<th>$${cp.toLocaleString()}/mtg</th>`);
+  html+=`<th>Max CPMH</th></tr></thead><tbody>`;
+
+  const maxCPMHs=[];
+  SENIORITY.forEach((sen,si)=>{
+    html+=`<tr><td style="font-weight:${si===0?600:400}">${sen.name}</td>`;
+    cpmhs.forEach(cp=>{
+      const s=calcS(si,0,m,cp,TRAILING_CR,pp,em);
+      const cls=s.netEBITDA>=base.netEBITDA*0.99?'cell-g':s.netEBITDA>=base.netEBITDA*0.85?'cell-a':'cell-r';
+      html+=`<td class="${cls}">${usdK(s.netEBITDA).trim()}</td>`;
+    });
+    let mc=BASE_CPMH;
+    for(let cp=BASE_CPMH;cp<=3000;cp+=50){
+      const s=calcS(si,0,m,cp,TRAILING_CR,pp,em);
+      if(s.netEBITDA<base.netEBITDA) break;
+      mc=cp;
+    }
+    maxCPMHs.push(mc);
+    html+=`<td class="cell-b">${usd(mc)}</td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  document.getElementById('sens-table').innerHTML=html;
+
+  const barC=maxCPMHs.map(v=>v>=1500?'#1A7A4A':v>=1000?'#1A5FBF':v>=800?'#A05C00':'#BF2020');
+  if(charts.cpmh) charts.cpmh.destroy();
+  charts.cpmh=new Chart(document.getElementById('ch-cpmh'),{
+    type:'bar',
+    data:{labels:SENIORITY.map(s=>s.name),datasets:[{label:'Max CPMH',data:maxCPMHs,backgroundColor:barC,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.raw.toLocaleString()}}},
+      scales:{y:{min:600,ticks:{color:'#A09C97',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'#F0EEE9'}},
+              x:{ticks:{color:'#6B6760',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+// ── HISTORY TAB ────────────────────────────────────────────────
+function buildHist(){
+  const colors=HIST.map(d=>d.v>100?'#BF2020':'#1A5FBF');
+  if(charts.hist) charts.hist.destroy();
+  charts.hist=new Chart(document.getElementById('ch-hist'),{
+    type:'bar',
+    data:{labels:HIST.map(d=>d.m),datasets:[{label:'Close rate',data:HIST.map(d=>d.v),backgroundColor:colors,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw+'%'}}},
+      scales:{y:{beginAtZero:true,suggestedMax:200,ticks:{color:'#A09C97',font:{size:10},callback:v=>v+'%'},grid:{color:'#F0EEE9'}},
+              x:{ticks:{color:'#6B6760',font:{size:10},autoSkip:false},grid:{display:false}}}}
+  });
+  const recent3=VALID_CR.slice(-3);
+  const r3avg=Math.round(recent3.reduce((a,b)=>a+b,0)/recent3.length);
+  document.getElementById('hist-cards').innerHTML=[
+    {l:'Trailing avg (excl. Apr)',v:TRAILING_AVG+'%'},
+    {l:'Recent 3-month avg',v:r3avg+'%'},
+    {l:'Valid range',v:Math.min(...VALID_CR)+'% – '+Math.max(...VALID_CR)+'%'},
+    {l:'Apr 2026 anomaly',v:'175% ⚠'},
+  ].map(c=>`<div class="mc"><div class="mc-lbl">${c.l}</div><div class="mc-val">${c.v}</div></div>`).join('');
+}
+
+// ── RECOMMENDATION TAB ─────────────────────────────────────────
+function buildRec(){
+  const {m,pp}=getP();
+  const em=ACT_EBITDA_M;
+  const base=calcS(0,0,m,BASE_CPMH,TRAILING_CR,pp,em);
+  const midPlus=calcS(1,0,m,BASE_CPMH,TRAILING_CR,pp,em);
+  const excOps=calcS(0,1,m,BASE_CPMH,TRAILING_CR,pp,em);
+
+  let mc1=BASE_CPMH;
+  for(let cp=BASE_CPMH;cp<=3000;cp+=50){const s=calcS(1,0,m,cp,TRAILING_CR,pp,em);if(s.netEBITDA<base.netEBITDA)break;mc1=cp;}
+  let mc2=BASE_CPMH;
+  for(let cp=BASE_CPMH;cp<=3000;cp+=50){const s=calcS(2,0,m,cp,TRAILING_CR,pp,em);if(s.netEBITDA<base.netEBITDA)break;mc2=cp;}
+
+  const rows=[
+    {l:'Current EBITDA',v:`<span class="badge b-red">-4.74% margin</span>`,n:`-$192,960 total Jan–May · -$38,591/month average. All scenarios modeled against this actual baseline.`},
+    {l:'Primary recommendation',v:'<span class="badge b-blue">Mid-Level+ seniority floor</span>',n:`Require all MQLs to be purchasing roles at Mid-Level seniority or above. Removes lowest-margin Junior placements, preserves ~82% of pipeline volume, lifts avg rev/customer by ~11%.`},
+    {l:'Secondary filter',v:'Exclude Operations family',n:`Operations roles average $3,563/mo vs blended $6,384. Excluding this family lifts deal quality with modest volume impact (~8% fewer meetings).`},
+    {l:'Revenue impact (Mid-Level+)',v:`+${Math.round((midPlus.effRevPerCustomer/base.effRevPerCustomer-1)*100)}% avg rev/customer`,n:`${usd(base.effRevPerCustomer)} → ${usd(midPlus.effRevPerCustomer)} per customer per month at current placement rate.`},
+    {l:'Max sustainable CPMH',v:`${usd(mc1)} (Mid-Level+) · ${usd(mc2)} (Senior+)`,n:`CPMH can rise to these levels before net EBITDA falls below baseline. Current headroom: +${usd(mc1-BASE_CPMH)} at Mid-Level+ floor.`},
+    {l:'Optimal MQL definition',v:'Mid-Level+ AND Operations excluded',n:`Combines the seniority floor with family filter. Expected outcome: higher avg deal size, better pipeline quality, sustainable CPMH increase.`},
+    {l:'Company size',v:'Retention multiplier — not primary quality gate',n:`Larger companies retain placements longer and rebuy more frequently. Recommend: keep 11+ employee floor as a secondary qualifier, not the primary one.`},
+    {l:'April 2026 audit',v:'<span class="badge b-amber">Action required</span>',n:`175% close rate must be root-caused. If it reflects real pipeline depth, trailing avg close rate should be revised upward, improving all scenario outputs.`},
+    {l:'Data gap — retention',v:'Placement duration and rebuy rate by client size',n:`Pull avg placement tenure and rebuy frequency from historical data. Required to quantify company-size retention multiplier and build LTV model.`},
+    {l:'Next step — marketing',v:'Reclassify MQL criteria in CRM',n:`Update ICP definition: "company purchasing Mid-Level+ role in non-Operations family with 11+ employees."`},
+    {l:'Next step — finance',v:'Build LTV model',n:`Once rebuy data is available, add 12-month LTV per customer. Single-placement revenue is incomplete — repeat placements per client are the true profitability driver.`},
+    {l:'90-day review',v:'Measure blended deal value under new MQL definition',n:`Compare avg rev/customer and net EBITDA against prior 90-day baseline. Confirm seniority floor is improving outcomes before escalating to Senior+ threshold.`},
+  ];
+
+  document.getElementById('rec-content').innerHTML=rows.map(r=>
+    `<div class="rec-row"><div class="rlbl">${r.l}</div><div><div class="rval">${r.v}</div><div class="rnote">${r.n}</div></div></div>`
+  ).join('');
+}
+
+// ── TAB ROUTER ─────────────────────────────────────────────────
+function showTab(id,btn){
+  ['model','families','sensitivity','history','rec'].forEach(t=>
+    document.getElementById('tab-'+t).style.display=t===id?'block':'none'
+  );
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(id==='families')   buildFamilies();
+  if(id==='sensitivity') buildSens();
+  if(id==='history')    buildHist();
+  if(id==='rec')        buildRec();
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+document.getElementById('sl-m').value  = 100;
+document.getElementById('sl-c').value  = 800;
+document.getElementById('sl-r').value  = 59;
+document.getElementById('sl-p').value  = 1.5;
+document.getElementById('sl-em').value = Math.round(ACT_EBITDA_M*100*10)/10;
+upd();
+</script>
+</body>
+</html>
